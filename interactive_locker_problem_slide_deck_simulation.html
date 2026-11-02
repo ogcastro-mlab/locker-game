@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Locker Problem - Interactive Slide Deck & Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#0f172a'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Lato', 'sans-serif'],
+                        heading: ['Poppins', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #0b0f19;
+            color: #f8fafc;
+        }
+
+        .slide-card {
+            display: none;
+            height: 100%;
+            width: 100%;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .slide-card.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Interactive Locker Design */
+        .locker {
+            perspective: 600px;
+            user-select: none;
+        }
+
+        .locker-door {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
+            transform-origin: left center;
+            transform-style: preserve-3d;
+        }
+
+        .locker.open .locker-door {
+            transform: rotateY(-110deg);
+        }
+
+        .locker-interior {
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Glow effects */
+        .glow-open {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.35);
+        }
+
+        .glow-highlight {
+            box-shadow: 0 0 18px rgba(245, 158, 11, 0.8);
+            border-color: #f59e0b !important;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-blue-500 selection:text-white">
+
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between z-30">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white font-heading font-bold px-3 py-1 rounded-lg text-sm tracking-wide">
+                IM 4.OA.B.4
+            </div>
+            <h1 class="text-lg font-heading font-bold text-slate-100 hidden sm:block">
+                The Locker Problem <span class="text-xs font-normal text-slate-400 ml-2">Task 938</span>
+            </h1>
+        </div>
+
+        <!-- Slide Progress Stepper -->
+        <div class="flex items-center space-x-2 text-base">
+            <button id="prevBtn" onclick="changeSlide(-1)" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition font-medium flex items-center space-x-1.5 disabled:opacity-40 disabled:cursor-not-allowed text-sm sm:text-base">
+                <i class="fa-solid fa-chevron-left text-xs sm:text-sm"></i>
+                <span class="hidden md:inline">Prev</span>
+            </button>
+            <span id="slideIndicator" class="px-3.5 py-1.5 bg-slate-950 text-blue-400 font-mono font-bold rounded-md border border-slate-800 text-sm sm:text-base">
+                1 / 7
+            </span>
+            <button id="nextBtn" onclick="changeSlide(1)" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition font-medium flex items-center space-x-1.5 text-sm sm:text-base">
+                <span class="hidden md:inline">Next</span>
+                <i class="fa-solid fa-chevron-right text-xs sm:text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Utilities -->
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleAudio()" id="soundToggleBtn" title="Toggle Sound Effects" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition">
+                <i class="fa-solid fa-volume-high text-base"></i>
+            </button>
+            <button onclick="toggleFullscreen()" title="Fullscreen Mode" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition">
+                <i class="fa-solid fa-expand text-base"></i>
+            </button>
+            <button onclick="openSlideJumpModal()" title="Jump to Slide" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition">
+                <i class="fa-solid fa-list text-base"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN SLIDE DISPLAY AREA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
+
+        <!-- SLIDE 1: COMBINED COVER & GAME RULES -->
+        <div class="slide-card active" id="slide-1">
+            <div class="my-auto py-2">
+                <div class="text-center mb-6">
+                    <span class="inline-block px-4 py-1.5 mb-3 text-sm sm:text-base font-semibold tracking-wider text-blue-400 uppercase bg-blue-950/80 border border-blue-800/60 rounded-full">
+                        Illustrative Mathematics • Grade 4 • Task 938 (4.OA.B.4)
+                    </span>
+                    <h1 class="text-4xl sm:text-6xl font-heading font-extrabold text-white tracking-tight mb-3">
+                        The Locker Problem
+                    </h1>
+                    <p class="max-w-2xl mx-auto text-base sm:text-lg text-slate-300 font-normal leading-relaxed">
+                        An interactive exploration of factors, multiples, and square numbers through Mr. Wolf's 20-locker hallway challenge.
+                    </p>
+                </div>
+
+                <!-- Rules Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                    <div class="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl flex flex-col">
+                        <div class="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center text-xl font-bold mb-3 border border-blue-500/20">
+                            1
+                        </div>
+                        <h3 class="text-xl font-heading font-bold text-white mb-2">20 Lockers, All Closed</h3>
+                        <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                            A school hallway contains 20 lockers numbered 1 to 20. Initially, every locker door is completely <strong>CLOSED</strong>.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl flex flex-col">
+                        <div class="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center text-xl font-bold mb-3 border border-amber-500/20">
+                            2
+                        </div>
+                        <h3 class="text-xl font-heading font-bold text-white mb-2">20 Students Walk Down</h3>
+                        <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                            20 students enter the hall one by one. Student 1 goes first, followed by Student 2, Student 3, all the way to Student 20.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl flex flex-col">
+                        <div class="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center text-xl font-bold mb-3 border border-emerald-500/20">
+                            3
+                        </div>
+                        <h3 class="text-xl font-heading font-bold text-white mb-2">The Multiples Rule</h3>
+                        <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                            Student <em>n</em> toggles every <strong><em>n-th</em> locker</strong>. (If open, they close it; if closed, they open it).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-blue-950/40 border border-blue-800/50 p-5 rounded-xl">
+                    <div class="flex items-center space-x-3 text-base sm:text-lg text-slate-200">
+                        <i class="fa-solid fa-lightbulb text-amber-400 text-2xl flex-shrink-0"></i>
+                        <span><strong>Challenge:</strong> Which lockers stay OPEN after all 20 students pass? Let's test it!</span>
+                    </div>
+                    <button onclick="jumpToSlide(2)" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-heading font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-0.5 flex items-center space-x-2 whitespace-nowrap text-base">
+                        <span>Start Guided Walkthrough</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: GUIDED WALKTHROUGH - FIRST 4 STUDENTS -->
+        <div class="slide-card" id="slide-2">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <span class="text-sm uppercase font-bold tracking-widest text-blue-400">Section 2 • Guided Walkthrough</span>
+                    <h2 class="text-3xl sm:text-4xl font-heading font-bold text-white">How Student Passes Work (First 4 Students)</h2>
+                </div>
+                <button onclick="jumpToSlide(3)" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-heading font-semibold rounded-xl text-sm sm:text-base transition flex items-center space-x-2 shadow-md">
+                    <span>Open Interactive Lab</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-auto">
+                <!-- S1 Card -->
+                <div class="bg-slate-800/80 border border-blue-500/40 p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xl font-heading font-bold text-blue-400">Student 1</span>
+                        <span class="px-2.5 py-1 bg-blue-950 text-blue-300 text-sm font-mono rounded">1-th multiples</span>
+                    </div>
+                    <p class="text-sm sm:text-base text-slate-300 mb-4 leading-relaxed">Opens <strong>every single locker</strong> (1, 2, 3, 4 ... 20).</p>
+                    <div class="text-sm sm:text-base font-semibold text-emerald-400">Result: All 20 Lockers OPEN</div>
+                </div>
+
+                <!-- S2 Card -->
+                <div class="bg-slate-800/80 border border-amber-500/40 p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xl font-heading font-bold text-amber-400">Student 2</span>
+                        <span class="px-2.5 py-1 bg-amber-950 text-amber-300 text-sm font-mono rounded">2-nd multiples</span>
+                    </div>
+                    <p class="text-sm sm:text-base text-slate-300 mb-4 leading-relaxed">Closes every <strong>even locker</strong> (2, 4, 6, 8 ... 20).</p>
+                    <div class="text-sm sm:text-base font-semibold text-slate-300">Result: Evens CLOSED, Odds OPEN</div>
+                </div>
+
+                <!-- S3 Card -->
+                <div class="bg-slate-800/80 border border-purple-500/40 p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xl font-heading font-bold text-purple-400">Student 3</span>
+                        <span class="px-2.5 py-1 bg-purple-950 text-purple-300 text-sm font-mono rounded">3-rd multiples</span>
+                    </div>
+                    <p class="text-sm sm:text-base text-slate-300 mb-4 leading-relaxed">Toggles every <strong>3rd locker</strong> (3, 6, 9, 12 ... 18).</p>
+                    <div class="text-sm sm:text-base font-semibold text-slate-300">Result: 3 opens/closes inverted</div>
+                </div>
+
+                <!-- S4 Card -->
+                <div class="bg-slate-800/80 border border-emerald-500/40 p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xl font-heading font-bold text-emerald-400">Student 4</span>
+                        <span class="px-2.5 py-1 bg-emerald-950 text-emerald-300 text-sm font-mono rounded">4-th multiples</span>
+                    </div>
+                    <p class="text-sm sm:text-base text-slate-300 mb-4 leading-relaxed">Toggles every <strong>4th locker</strong> (4, 8, 12, 16, 20).</p>
+                    <div class="text-sm sm:text-base font-semibold text-emerald-400">Notice Locker 4 re-opens!</div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-5 bg-slate-900 border border-slate-800 rounded-xl text-center flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span class="text-slate-300 text-sm sm:text-base">Review how the first 4 student passes work, then launch the lab when ready!</span>
+                <button onclick="jumpToSlide(3)" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm sm:text-base font-semibold transition whitespace-nowrap">
+                    Launch Interactive Lab <i class="fa-solid fa-play ml-1.5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: HANDS-ON INTERACTIVE LOCKER LAB -->
+        <div class="slide-card" id="slide-3">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div>
+                    <span class="text-sm uppercase font-bold tracking-widest text-emerald-400">Interactive Lab</span>
+                    <h2 class="text-3xl sm:text-4xl font-heading font-bold text-white">Interactive Locker Hallway</h2>
+                </div>
+                
+                <!-- Controls Toolbar -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <button onclick="runNextStudent()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-base font-semibold transition flex items-center space-x-2 shadow-md">
+                        <i class="fa-solid fa-person-walking"></i>
+                        <span>Run Student <span id="currentStudentBadge">1</span></span>
+                    </button>
+                    <button onclick="toggleAutoPlay()" id="autoPlayBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-base font-semibold transition flex items-center space-x-2 shadow-md">
+                        <i class="fa-solid fa-play" id="autoPlayIcon"></i>
+                        <span id="autoPlayText">Auto-Play All</span>
+                    </button>
+                    <button onclick="resetLockerLab()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-base font-semibold transition flex items-center space-x-1.5 border border-slate-700">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hallway Locker Interactive Grid -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 mb-4 flex-1 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-3 text-sm sm:text-base text-slate-300">
+                    <span id="hallwayStatus">Click any locker door to toggle manually, or use student pass controls above!</span>
+                    <span id="openCountBadge" class="font-mono text-emerald-400 font-bold bg-slate-950 px-3 py-1.5 rounded-md border border-slate-800 text-base">
+                        Open: 0 / 20
+                    </span>
+                </div>
+
+                <!-- Lockers Container -->
+                <div id="lockerGrid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-10 gap-3 my-auto py-2">
+                    <!-- Dynamic lockers will be rendered here by JS -->
+                </div>
+
+                <div id="actionLog" class="text-center text-sm sm:text-base font-mono text-amber-300 bg-slate-950/70 p-3 rounded-lg border border-slate-800/80 min-h-[44px] flex items-center justify-center">
+                    Ready! Click "Run Student 1" to start the challenge.
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: GUIDED INQUIRY PROMPTS -->
+        <div class="slide-card" id="slide-4">
+            <div class="mb-4">
+                <span class="text-sm uppercase font-bold tracking-widest text-purple-400">Section 3 • Inquiry & Discussion</span>
+                <h2 class="text-3xl sm:text-4xl font-heading font-bold text-white">Classroom Discussion Questions</h2>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-auto">
+                <!-- Q1 -->
+                <div onclick="toggleAnswer('ans1')" class="cursor-pointer bg-slate-800/80 hover:bg-slate-800 border border-emerald-500/40 p-5 sm:p-6 rounded-2xl flex flex-col justify-between transition hover:-translate-y-1">
+                    <div>
+                        <div class="text-emerald-400 font-bold text-base sm:text-lg mb-2 flex items-center justify-between">
+                            <span>Question 1</span>
+                            <i class="fa-solid fa-circle-question text-xl"></i>
+                        </div>
+                        <p class="text-base sm:text-lg font-bold text-white mb-3 leading-snug">
+                            Which lockers are still open at the end of the game?
+                        </p>
+                    </div>
+                    <div id="ans1" class="hidden mt-2 p-3.5 bg-emerald-950/80 border border-emerald-800/80 text-emerald-200 text-sm sm:text-base rounded-xl leading-relaxed">
+                        <strong>Answer: Perfect Squares!</strong> (1, 4, 9, 16). They have an odd number of factors (odd touches), leaving them OPEN!
+                    </div>
+                    <div class="text-center text-sm text-slate-400 mt-2 font-mono">Click to reveal answer</div>
+                </div>
+
+                <!-- Q2 -->
+                <div onclick="toggleAnswer('ans2')" class="cursor-pointer bg-slate-800/80 hover:bg-slate-800 border border-blue-500/40 p-5 sm:p-6 rounded-2xl flex flex-col justify-between transition hover:-translate-y-1">
+                    <div>
+                        <div class="text-blue-400 font-bold text-base sm:text-lg mb-2 flex items-center justify-between">
+                            <span>Question 2</span>
+                            <i class="fa-solid fa-circle-question text-xl"></i>
+                        </div>
+                        <p class="text-base sm:text-lg font-bold text-white mb-3 leading-snug">
+                            Which lockers were touched by only two students?
+                        </p>
+                    </div>
+                    <div id="ans2" class="hidden mt-2 p-3.5 bg-blue-950/80 border border-blue-800/80 text-blue-200 text-sm sm:text-base rounded-xl leading-relaxed">
+                        <strong>Answer: Prime Numbers!</strong> (2, 3, 5, 7, 11, 13, 17, 19). Prime numbers have exactly 2 factors: 1 and themselves.
+                    </div>
+                    <div class="text-center text-sm text-slate-400 mt-2 font-mono">Click to reveal answer</div>
+                </div>
+
+                <!-- Q3 -->
+                <div onclick="toggleAnswer('ans3')" class="cursor-pointer bg-slate-800/80 hover:bg-slate-800 border border-amber-500/40 p-5 sm:p-6 rounded-2xl flex flex-col justify-between transition hover:-translate-y-1">
+                    <div>
+                        <div class="text-amber-400 font-bold text-base sm:text-lg mb-2 flex items-center justify-between">
+                            <span>Question 3</span>
+                            <i class="fa-solid fa-circle-question text-xl"></i>
+                        </div>
+                        <p class="text-base sm:text-lg font-bold text-white mb-3 leading-snug">
+                            Which lockers were touched by only three students?
+                        </p>
+                    </div>
+                    <div id="ans3" class="hidden mt-2 p-3.5 bg-amber-950/80 border border-amber-800/80 text-amber-200 text-sm sm:text-base rounded-xl leading-relaxed">
+                        <strong>Answer: Squares of Primes!</strong> Lockers <strong>4</strong> (factors: 1, 2, 4) and <strong>9</strong> (factors: 1, 3, 9).
+                    </div>
+                    <div class="text-center text-sm text-slate-400 mt-2 font-mono">Click to reveal answer</div>
+                </div>
+
+                <!-- Q4 -->
+                <div onclick="toggleAnswer('ans4')" class="cursor-pointer bg-slate-800/80 hover:bg-slate-800 border border-rose-500/40 p-5 sm:p-6 rounded-2xl flex flex-col justify-between transition hover:-translate-y-1">
+                    <div>
+                        <div class="text-rose-400 font-bold text-base sm:text-lg mb-2 flex items-center justify-between">
+                            <span>Question 4</span>
+                            <i class="fa-solid fa-circle-question text-xl"></i>
+                        </div>
+                        <p class="text-base sm:text-lg font-bold text-white mb-3 leading-snug">
+                            Which lockers were touched the most?
+                        </p>
+                    </div>
+                    <div id="ans4" class="hidden mt-2 p-3.5 bg-rose-950/80 border border-rose-800/80 text-rose-200 text-sm sm:text-base rounded-xl leading-relaxed">
+                        <strong>Answer: Lockers 12 &amp; 18!</strong> Each touched <strong>6 times</strong>.<br>• 12: (1, 2, 3, 4, 6, 12)<br>• 18: (1, 2, 3, 6, 9, 18)
+                    </div>
+                    <div class="text-center text-sm text-slate-400 mt-2 font-mono">Click to reveal answer</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: DATA MATRIX & FACTORS -->
+        <div class="slide-card" id="slide-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                    <span class="text-sm uppercase font-bold tracking-widest text-purple-400">Section 4 • Data Matrix</span>
+                    <h2 class="text-3xl sm:text-4xl font-heading font-bold text-white">Locker State & Factor Analysis</h2>
+                </div>
+                <div class="flex gap-2.5">
+                    <button onclick="filterTable('all')" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-sm sm:text-base text-slate-200 rounded-lg font-semibold">All Lockers</button>
+                    <button onclick="filterTable('open')" class="px-4 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/50 text-sm sm:text-base text-emerald-300 rounded-lg font-semibold">Open Only</button>
+                    <button onclick="filterTable('square')" class="px-4 py-1.5 bg-amber-950 hover:bg-amber-900 border border-amber-700/50 text-sm sm:text-base text-amber-300 rounded-lg font-semibold">Square Numbers</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex-1 flex flex-col">
+                <div class="overflow-y-auto max-h-[380px] p-2">
+                    <table class="w-full text-left text-sm sm:text-base">
+                        <thead class="bg-slate-950 text-slate-300 font-heading sticky top-0 uppercase text-xs sm:text-sm tracking-wider">
+                            <tr>
+                                <th class="p-3.5">Locker #</th>
+                                <th class="p-3.5">Students Who Touched It (Factors)</th>
+                                <th class="p-3.5 text-center">Factor Count</th>
+                                <th class="p-3.5 text-center">Parity</th>
+                                <th class="p-3.5 text-center">Final State</th>
+                            </tr>
+                        </thead>
+                        <tbody id="factorTableBody" class="divide-y divide-slate-800 text-slate-200">
+                            <!-- Populated dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: EXTENDING TO 100 LOCKERS -->
+        <div class="slide-card" id="slide-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div>
+                    <span class="text-sm uppercase font-bold tracking-widest text-emerald-400">Section 5 • Scaling Up</span>
+                    <h2 class="text-3xl sm:text-4xl font-heading font-bold text-white">The 100-Locker Challenge!</h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <button onclick="run100LockerSim()" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-heading font-bold text-base shadow-lg shadow-blue-600/30 transition flex items-center space-x-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Simulate 100 Lockers Instantly</span>
+                    </button>
+                    <button onclick="reset100LockerSim()" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-heading font-semibold text-base transition flex items-center space-x-1.5 border border-slate-700">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-4">
+                <div id="grid100Container" class="grid grid-cols-10 gap-1.5 max-h-[320px] overflow-y-auto p-2 bg-slate-950 rounded-xl">
+                    <!-- 100 mini lockers rendered here -->
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-900/90 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-3 text-sm sm:text-base">
+                <span class="text-slate-200 flex items-center gap-2">
+                    Open Lockers Count: <strong id="open100Count" class="text-emerald-400 font-mono text-lg sm:text-xl">0</strong>
+                </span>
+                <span id="open100SquaresList" class="hidden text-amber-300 font-mono text-sm sm:text-base bg-slate-950 px-3 py-1 rounded-lg border border-slate-800/80">
+                    <!-- Square numbers populates dynamically on simulate -->
+                </span>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: SUMMARY & TAKEAWAYS -->
+        <div class="slide-card" id="slide-7">
+            <div class="text-center max-w-4xl mx-auto my-auto py-6">
+                <div class="w-20 h-20 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-6">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+
+                <h2 class="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-5">
+                    Key Mathematical Takeaway
+                </h2>
+
+                <p class="text-2xl sm:text-3xl text-slate-100 font-medium leading-relaxed mb-8 bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-xl">
+                    A locker remains <strong class="text-emerald-400">OPEN</strong> if and only if its locker number has an <strong class="text-amber-400">ODD number of factors</strong> — which is true exclusively for <strong class="text-blue-400">PERFECT SQUARE NUMBERS</strong>!
+                </p>
+
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button onclick="jumpToSlide(3)" class="px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition border border-slate-700 text-base">
+                        <i class="fa-solid fa-rotate-left mr-2"></i> Replay Locker Lab
+                    </button>
+                    <button onclick="jumpToSlide(1)" class="px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition text-base shadow-lg shadow-blue-600/30">
+                        <i class="fa-solid fa-house mr-2"></i> Return to Beginning
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- SLIDE JUMP MODAL -->
+    <div id="slideModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-heading font-bold text-white">Jump to Slide</h3>
+                <button onclick="closeSlideJumpModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div id="slideModalList" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 7;
+
+        // Locker Simulation State (20 Lockers default)
+        const TOTAL_LOCKERS = 20;
+        let lockers = Array(TOTAL_LOCKERS + 1).fill(false); // Index 1 to 20
+        let lockerTouchCounts = Array(TOTAL_LOCKERS + 1).fill(0);
+        let studentTouchHistory = Array.from({ length: TOTAL_LOCKERS + 1 }, () => []);
+        let currentStudent = 1;
+        let isAudioEnabled = true;
+        let isAutoPlaying = false;
+        let autoPlayTimer = null;
+
+        // Web Audio API Sound Synthesizer for mechanical click
+        let audioCtx = null;
+
+        function playLockerSound(isOpen) {
+            if (!isAudioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = isOpen ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(isOpen ? 440 : 220, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(isOpen ? 880 : 110, audioCtx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.09);
+            } catch (e) {
+                // Ignore audio restriction errors
+            }
+        }
+
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btn = document.getElementById('soundToggleBtn');
+            btn.innerHTML = isAudioEnabled ? '<i class="fa-solid fa-volume-high text-sm"></i>' : '<i class="fa-solid fa-volume-xmark text-sm text-rose-400"></i>';
+        }
+
+        const slideTitles = [
+            "1. Title & Game Rules",
+            "2. First 4 Student Passes (Guide)",
+            "3. Interactive Locker Hallway Lab",
+            "4. Classroom Discussion Questions",
+            "5. Locker State & Factor Matrix",
+            "6. The 100-Locker Challenge",
+            "7. Key Mathematical Takeaway"
+        ];
+
+        function updateSlideUI() {
+            if (currentSlide !== 3 && isAutoPlaying) {
+                stopAutoPlay();
+            }
+
+            document.querySelectorAll('.slide-card').forEach((el, idx) => {
+                el.classList.toggle('active', idx + 1 === currentSlide);
+            });
+
+            document.getElementById('slideIndicator').innerText = `${currentSlide} / ${totalSlides}`;
+            document.getElementById('prevBtn').disabled = currentSlide === 1;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+
+            // Re-render components when entering relevant slides
+            if (currentSlide === 3) renderLockers();
+            if (currentSlide === 5) renderFactorTable('all');
+            if (currentSlide === 6) init100Lockers();
+        }
+
+        function changeSlide(delta) {
+            const next = currentSlide + delta;
+            if (next >= 1 && next <= totalSlides) {
+                currentSlide = next;
+                updateSlideUI();
+            }
+        }
+
+        function jumpToSlide(num) {
+            currentSlide = num;
+            updateSlideUI();
+            closeSlideJumpModal();
+        }
+
+        function previewStudentPass(studentNum) {
+            const affected = [];
+            for (let i = studentNum; i <= TOTAL_LOCKERS; i += studentNum) {
+                affected.push(i);
+            }
+            jumpToSlide(3); // Jump directly to interactive lab (Slide 3)
+            renderLockers(affected);
+            document.getElementById('actionLog').innerHTML = `Previewing Student ${studentNum}'s path (Multiples: <strong class="text-amber-400">${affected.join(', ')}</strong>)`;
+        }
+
+        function openSlideJumpModal() {
+            const list = document.getElementById('slideModalList');
+            if (!list) return;
+            list.innerHTML = slideTitles.map((title, i) => `
+                <button onclick="jumpToSlide(${i + 1})" class="w-full text-left p-3 rounded-xl transition flex items-center justify-between ${currentSlide === i + 1 ? 'bg-blue-600 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                    <span>${title}</span>
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            `).join('');
+            document.getElementById('slideModal').classList.remove('hidden');
+        }
+
+        function closeSlideJumpModal() {
+            const modal = document.getElementById('slideModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        function renderLockers(highlightIndices = []) {
+            const grid = document.getElementById('lockerGrid');
+            if (!grid) return;
+
+            let html = '';
+            for (let i = 1; i <= TOTAL_LOCKERS; i++) {
+                const isOpen = lockers[i];
+                const touches = lockerTouchCounts[i];
+                const isHighlighted = highlightIndices.includes(i);
+
+                html += `
+                    <div onclick="toggleLockerManual(${i})" 
+                         title="Locker #${i} - Click to toggle! Touches: ${touches}"
+                         class="locker relative h-28 sm:h-32 bg-slate-950 border-2 ${isHighlighted ? 'glow-highlight' : (isOpen ? 'border-emerald-500/70 glow-open' : 'border-slate-800')} rounded-xl p-2 flex flex-col justify-between cursor-pointer transition-all transform hover:scale-[1.03]">
+                        
+                        <!-- Door Label -->
+                        <div class="flex items-center justify-between text-xs sm:text-sm font-mono z-10">
+                            <span class="font-bold text-slate-100">#${i}</span>
+                            <span class="px-1.5 py-0.5 rounded text-xs ${isOpen ? 'bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold' : 'bg-slate-800 text-slate-400'}">
+                                ${isOpen ? 'OPEN' : 'CLOSED'}
+                            </span>
+                        </div>
+
+                        <!-- Locker Door Visual -->
+                        <div class="locker-door absolute inset-0 bg-slate-800 border border-slate-700/80 rounded-lg p-2 flex flex-col justify-between z-20 ${isOpen ? 'open' : ''}">
+                            <div class="w-full flex justify-end">
+                                <div class="w-2.5 h-4 bg-slate-950 border border-slate-600 rounded-sm"></div>
+                            </div>
+                            <div class="text-center font-heading font-extrabold text-slate-200 text-xl sm:text-2xl">
+                                ${i}
+                            </div>
+                            <div class="text-xs text-slate-300 text-center font-mono">
+                                ${touches} ${touches === 1 ? 'touch' : 'touches'}
+                            </div>
+                        </div>
+
+                        <!-- Locker Interior Content -->
+                        <div class="locker-interior absolute inset-0 rounded-lg flex flex-col items-center justify-center p-2 text-center">
+                            <i class="fa-solid fa-sparkles text-emerald-400 text-2xl mb-1"></i>
+                            <span class="text-xs font-bold text-emerald-300 font-mono">Factor Match</span>
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+
+            // Update Header Counts
+            const openCount = lockers.filter(Boolean).length;
+            const badge = document.getElementById('openCountBadge');
+            if (badge) badge.innerText = `Open: ${openCount} / ${TOTAL_LOCKERS}`;
+            const studentBadge = document.getElementById('currentStudentBadge');
+            if (studentBadge) studentBadge.innerText = currentStudent > TOTAL_LOCKERS ? 'Done' : currentStudent;
+        }
+
+        function toggleLockerManual(num) {
+            lockers[num] = !lockers[num];
+            lockerTouchCounts[num]++;
+            studentTouchHistory[num].push('Manual');
+            playLockerSound(lockers[num]);
+            renderLockers([num]);
+        }
+
+        function runNextStudent() {
+            if (currentStudent > TOTAL_LOCKERS) {
+                stopAutoPlay();
+                document.getElementById('actionLog').innerHTML = `<span class="text-emerald-400 font-bold">All 20 students have passed! Lockers 1, 4, 9, and 16 remain OPEN.</span>`;
+                return;
+            }
+
+            const affected = [];
+            for (let i = currentStudent; i <= TOTAL_LOCKERS; i += currentStudent) {
+                lockers[i] = !lockers[i];
+                lockerTouchCounts[i]++;
+                studentTouchHistory[i].push(currentStudent);
+                affected.push(i);
+            }
+
+            playLockerSound(true);
+            renderLockers(affected);
+
+            document.getElementById('actionLog').innerHTML = `
+                Student <strong>${currentStudent}</strong> walked down and toggled multiples of ${currentStudent}: 
+                <span class="text-emerald-400 font-bold">${affected.join(', ')}</span>
+            `;
+
+            currentStudent++;
+        }
+
+        function toggleAutoPlay() {
+            if (isAutoPlaying) {
+                stopAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        }
+
+        function startAutoPlay() {
+            if (currentStudent > TOTAL_LOCKERS) return;
+            isAutoPlaying = true;
+            
+            const btn = document.getElementById('autoPlayBtn');
+            const icon = document.getElementById('autoPlayIcon');
+            const text = document.getElementById('autoPlayText');
+            
+            if (btn) {
+                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                btn.classList.add('bg-amber-600', 'hover:bg-amber-500');
+            }
+            if (icon) icon.className = 'fa-solid fa-pause';
+            if (text) text.innerText = 'Pause Auto-Play';
+
+            autoPlayTimer = setInterval(() => {
+                if (currentStudent > TOTAL_LOCKERS) {
+                    stopAutoPlay();
+                    return;
+                }
+                runNextStudent();
+            }, 600);
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+            }
+            isAutoPlaying = false;
+
+            const btn = document.getElementById('autoPlayBtn');
+            const icon = document.getElementById('autoPlayIcon');
+            const text = document.getElementById('autoPlayText');
+
+            if (btn) {
+                btn.classList.remove('bg-amber-600', 'hover:bg-amber-500');
+                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+            }
+            if (icon) icon.className = 'fa-solid fa-play';
+            if (text) text.innerText = currentStudent > TOTAL_LOCKERS ? 'Auto-Play Done' : 'Auto-Play All';
+        }
+
+        function resetLockerLab() {
+            stopAutoPlay();
+            lockers.fill(false);
+            lockerTouchCounts.fill(0);
+            studentTouchHistory = Array.from({ length: TOTAL_LOCKERS + 1 }, () => []);
+            currentStudent = 1;
+            renderLockers();
+            document.getElementById('actionLog').innerText = 'Reset complete! Click "Run Student 1" to start.';
+        }
+
+        function getFactors(n) {
+            const factors = [];
+            for (let i = 1; i <= n; i++) {
+                if (n % i === 0) factors.push(i);
+            }
+            return factors;
+        }
+
+        function isSquare(n) {
+            return Number.isInteger(Math.sqrt(n));
+        }
+
+        function renderFactorTable(filter = 'all') {
+            const tbody = document.getElementById('factorTableBody');
+            if (!tbody) return;
+
+            let html = '';
+            for (let i = 1; i <= TOTAL_LOCKERS; i++) {
+                const factors = getFactors(i);
+                const count = factors.length;
+                const square = isSquare(i);
+                const isOpen = square; // Final state for perfect squares
+
+                if (filter === 'open' && !isOpen) continue;
+                if (filter === 'square' && !square) continue;
+
+                html += `
+                    <tr class="hover:bg-slate-800/50 transition ${square ? 'bg-blue-950/30' : ''}">
+                        <td class="p-3.5 font-bold text-white font-mono text-sm sm:text-base">
+                            #${i} ${square ? '<span class="ml-1 text-xs sm:text-sm text-amber-400 font-sans">★ Square</span>' : ''}
+                        </td>
+                        <td class="p-3.5 text-slate-200 font-mono text-sm sm:text-base">
+                            ${factors.map(f => `S${f}`).join(', ')}
+                        </td>
+                        <td class="p-3.5 text-center font-bold text-sm sm:text-base ${count % 2 === 1 ? 'text-amber-400' : 'text-slate-400'} font-mono">
+                            ${count}
+                        </td>
+                        <td class="p-3.5 text-center font-semibold text-sm">
+                            ${count % 2 === 1 ? '<span class="text-amber-400 font-bold">ODD</span>' : '<span class="text-slate-400">EVEN</span>'}
+                        </td>
+                        <td class="p-3.5 text-center">
+                            <span class="px-3 py-1 rounded-full text-xs sm:text-sm font-bold ${isOpen ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}">
+                                ${isOpen ? 'OPEN' : 'CLOSED'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = html;
+        }
+
+        function filterTable(filter) {
+            renderFactorTable(filter);
+        }
+
+        function init100Lockers() {
+            const container = document.getElementById('grid100Container');
+            if (!container || container.children.length > 0) return;
+
+            let html = '';
+            for (let i = 1; i <= 100; i++) {
+                html += `
+                    <div id="miniLocker-${i}" class="h-8 rounded text-xs font-mono flex items-center justify-center font-bold bg-slate-900 border border-slate-800 text-slate-400 transition-all">
+                        ${i}
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function run100LockerSim() {
+            let openCount = 0;
+            const openSquares = [];
+            for (let i = 1; i <= 100; i++) {
+                const mini = document.getElementById(`miniLocker-${i}`);
+                const square = isSquare(i);
+                if (square) {
+                    mini.className = "h-8 rounded text-xs font-mono flex items-center justify-center font-bold bg-emerald-600 text-white shadow-md shadow-emerald-600/30 border border-emerald-400 animate-pulse";
+                    openCount++;
+                    openSquares.push(i);
+                } else {
+                    mini.className = "h-8 rounded text-xs font-mono flex items-center justify-center font-bold bg-slate-900 border border-slate-800 text-slate-600 opacity-60";
+                }
+            }
+            document.getElementById('open100Count').innerText = `${openCount}`;
+            const listEl = document.getElementById('open100SquaresList');
+            if (listEl) {
+                listEl.innerHTML = `Square Lockers: <strong class="text-emerald-400">${openSquares.join(', ')}</strong>`;
+                listEl.classList.remove('hidden');
+            }
+            playLockerSound(true);
+        }
+
+        function reset100LockerSim() {
+            for (let i = 1; i <= 100; i++) {
+                const mini = document.getElementById(`miniLocker-${i}`);
+                if (mini) {
+                    mini.className = "h-8 rounded text-xs font-mono flex items-center justify-center font-bold bg-slate-900 border border-slate-800 text-slate-400 transition-all";
+                }
+            }
+            const countEl = document.getElementById('open100Count');
+            if (countEl) countEl.innerText = '0';
+            const listEl = document.getElementById('open100SquaresList');
+            if (listEl) listEl.classList.add('hidden');
+        }
+
+        function toggleAnswer(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                changeSlide(1);
+            } else if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            }
+        });
+
+        window.onload = function() {
+            updateSlideUI();
+            renderLockers();
+        };
+    </script>
+</body>
+</html>
